@@ -3,6 +3,7 @@ package funkin.backend.assets;
 import flixel.util.FlxSignal.FlxTypedSignal;
 import funkin.backend.system.MainState;
 import funkin.backend.utils.CoolUtil;
+import funkin.backend.utils.GJUtil;
 import haxe.ds.StringMap;
 import haxe.io.Path;
 import lime.text.Font;
@@ -72,6 +73,9 @@ class ModsFolder {
 			Logs.logText('Switched to mod: '),
 			Logs.logText(mod, GREEN)
 		], VERBOSE);
+
+		if (GJUtil.active)
+			GJUtil.logout();
 	}
 
 	public static function reloadMods() {

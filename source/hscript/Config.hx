@@ -34,6 +34,7 @@ class Config {
 
 	public static final DISALLOW_ABSTRACT_AND_ENUM = [
 		"funkin.backend.scripting.events.sprite.PlayAnimContext", // Error: expected member name or ';' after declaration specifiers, Due to define macro from math.h
+		"funkin.backend.utils.GameJoltSecurity",
 	];
 
 	@:unreflective
