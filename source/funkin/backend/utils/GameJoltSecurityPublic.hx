@@ -21,12 +21,16 @@ import openfl.events.*;
  * used in distributed CNE builds cannot be shared.
  * Instead, we provide this public-facing file for hardcoding purposes.
  * 
- * **WE HIGHLY ENCOURAGE YOU TO COME UP WITH AN ENCRYPTION METHOD FOR GAMEJOLT KEYS.**
- * Decrypting those keys is done in the setter of `encryptedGameToken`. After you make
- * that happen, then you can easily rename this file to `GameJoltSecurity.hx` and let
- * Codename do its thing.
+ * To use this file, make a copy and rename the copy's filename and class name to
+ * `GameJoltSecurity.hx`. To modify the encryption method, go to the function
+ * `set_encryptedGameToken` and modify the code in the first half of the null
+ * check (`if (tok != null) {}`).
  * 
- * ***DO NOT LET YOUR PLAYERS PUT THE RAW KEYS IN ANY SOFTCODED FILES!!! WE ARE NOT***
+ * **WE HIGHLY ENCOURAGE YOU TO COME UP WITH AN ENCRYPTION METHOD FOR GAMEJOLT KEYS.**
+ * HaxeFoundation's crypto package is installed with Codename, you can see the methods
+ * you can use (as well as the documentation) [here](https://github.com/HaxeFoundation/crypto).
+ * 
+ * # ***DO NOT LET YOUR PLAYERS PUT THE RAW KEYS IN ANY SOFTCODED FILES!!! WE ARE NOT***
  * ***RESPONSIBLE IF YOU DON'T MAKE YOUR PLAYERS ENCRYPT THEIR KEYS AND THEIR STUFF***
  * ***GETS HACKED!!!!***
  * 
@@ -35,7 +39,8 @@ import openfl.events.*;
  * ~ SplatterDash
  */
 @:noCustomClass
-abstract class GameJoltSecurity implements IHScriptCustomBehaviour
+@:dox(hide)
+abstract class GameJoltSecurityPublic implements IHScriptCustomBehaviour
 {
 	/**
 	 * Token for the user if they're logged in.
@@ -57,10 +62,19 @@ abstract class GameJoltSecurity implements IHScriptCustomBehaviour
 	 */
 	@:noPrivateAccess static var revealedGameToken:String;
 
+	/**
+	 * URL sent to GameJolt per request.
+	 */
 	@:noPrivateAccess static var url(get, never):String;
 
+	/**
+	 * The previous response created by the API client. Usually for just storage purposes.
+	 */
 	static var lastResponse:Response = {success: false, message: "No response yet."};
 
+	/**
+	 * The current call being processed.
+	 */
 	static var curCall:Null<RequestType> = null;
 
 	// hscript - thanks LJ :D
@@ -81,8 +95,11 @@ abstract class GameJoltSecurity implements IHScriptCustomBehaviour
 
 	static function handleRequest(async:Bool = false, data:RequestType, ?onProgress:Array<Float>->Void):Response
 	{
-		if (encryptedGameToken == null)
-			return;
+		if (encryptedGameToken == null || gameId == null) {
+			lastResponse = {success: false, message: 'Missing game token and/or game ID.'};
+			curCall = null;
+			return lastResponse;
+		}
 
 		curCall = data;
 		
@@ -90,17 +107,20 @@ abstract class GameJoltSecurity implements IHScriptCustomBehaviour
 			var loader = new openfl.net.URLLoader();
 			loader.addEventListener(Event.COMPLETE, function(complete) {
 				lastResponse = Json.parse(cast(loader.data, String)).response;
-				if (lastResponse.message != null)
+				if (lastResponse.message != null) {
 					trace('Response Error: ${lastResponse.message}');
+				}
+				
 			});
 			loader.addEventListener(ProgressEvent.PROGRESS, progress -> { if (onProgress != null) onProgress([progress.bytesLoaded, progress.bytesTotal]);});
 			loader.addEventListener(IOErrorEvent.IO_ERROR, function(ioError) {
 				lastResponse = {success: false, message: 'IO Error: ${ioError.text}'};
 			});
-			loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, securityError -> {
+			loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, (securityError) -> {
 				lastResponse = {success: false, message: 'Security Error: ${securityError.text}'};
 			});
 			loader.load(new openfl.net.URLRequest(url));
+			return {success: false, message: "No response yet."};
 		} else {
 			var loader:Http = new Http(url);
 			loader.onData = function(data) {
@@ -113,7 +133,6 @@ abstract class GameJoltSecurity implements IHScriptCustomBehaviour
 			};
 			loader.request(false);
 		}
-
 		curCall = null;
 		return lastResponse;
 	}
